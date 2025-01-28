@@ -2,6 +2,7 @@ import json
 import random
 import sys
 import pygame as pg
+from creating_map import create_and_save_map
 
 # Инициализация Pygame
 pg.init()
@@ -73,8 +74,11 @@ class Player(pg.sprite.Sprite):
         self.rect.center = (screen_width // 2, screen_height // 2)
         self.speed = 5
         self.is_del = [[[] for _ in range(5)] for _ in range(5)]
+        self.key_parts_collected = 0  # Счетчик собранных частей ключа
+        self.floors_completed = 0  # Счетчик пройденных этажей
+        self.near_key = False  # Флаг для отслеживания близости к ключу
 
-    def update(self, trees, current_map_part, map_parts):
+    def update(self, trees, current_map_part, map_parts, key_parts, doors):
         self.current_map_part = current_map_part
         keys = pg.key.get_pressed()
         if keys[pg.K_w]:
@@ -127,6 +131,38 @@ class Player(pg.sprite.Sprite):
                 self.rect.bottom = screen_height
 
         load_map_part(current_map_part, map_parts, self.is_del[current_map_part[0]][current_map_part[1]])
+
+        # Проверка на взаимодействие с дверью
+        for door in doors:
+            if self.rect.colliderect(door.rect) and self.key_parts_collected == 4:
+                generate_new_map()
+
+        # Проверка на близость к ключу
+        self.near_key = False
+        for key_part in key_parts:
+            if self.rect.colliderect(key_part.rect):
+                self.near_key = True
+                break
+
+    def adjust_position(self, current_map_part, map_parts):
+        map_data = map_parts[current_map_part[0]][current_map_part[1]]
+        player_x = self.rect.centerx // (screen_width // 10)
+        player_y = self.rect.centery // (screen_height // 10)
+
+        if map_data[player_y][player_x][0] == 1:
+            for dx in range(-1, 2):
+                for dy in range(-1, 2):
+                    new_x = player_x + dx
+                    new_y = player_y + dy
+                    if 0 <= new_x < 10 and 0 <= new_y < 10 and map_data[new_y][new_x][0] == 0:
+                        self.rect.centerx = (new_x + 0.5) * (
+                                screen_width // 10)
+                        self.rect.centery = (new_y + 0.5) * (
+                                screen_height // 10)
+                        return
+
+
+
 
     def adjust_position(self, current_map_part, map_parts):
         map_data = map_parts[current_map_part[0]][current_map_part[1]]
@@ -207,6 +243,17 @@ current_map_part = [2, 2]
 # Загрузка начальной части карты
 load_map_part(current_map_part, map_parts, check=player.is_del[current_map_part[0]][current_map_part[1]])
 
+def generate_new_map():
+    global map_parts, current_map_part, player
+    create_and_save_map('map.json')
+    with open("map.json") as f:
+        map_parts = json.load(f)
+    current_map_part = [2, 2]
+    player.key_parts_collected = 0
+    player.floors_completed += 1  # Увеличиваем счетчик пройденных этажей
+    player.is_del = [[[] for _ in range(5)] for _ in range(5)]
+    load_map_part(current_map_part, map_parts, check=player.is_del[current_map_part[0]][current_map_part[1]])
+
 
 # Функция для отображения катсцены
 def show_cutscene(image_paths):
@@ -279,12 +326,29 @@ while running:
         elif event.type == pg.KEYDOWN:
             if event.key == pg.K_F11:
                 running = False
+            elif event.key == pg.K_f:  # Обработка нажатия кнопки "F"
+                for key_part in key_parts:
+                    if player.rect.colliderect(key_part.rect):
+                        player.key_parts_collected += 1
+                        key_part.kill()
+                        player.is_del[current_map_part[0]][current_map_part[1]].append([key_part.x_pos, key_part.y_pos])
 
-    player.update(trees, current_map_part, map_parts)
-    all_sprites.update(trees, current_map_part, map_parts)
+    player.update(trees, current_map_part, map_parts, key_parts, doors)
+    all_sprites.update(trees, current_map_part, map_parts, key_parts, doors)
 
     screen.blit(background, (0, 0))  # Отображение фона
     all_sprites.draw(screen)
+
+    # Отображение количества собранных ключей и пройденных этажей
+    keys_text = font.render(f"Части ключа: {player.key_parts_collected}/4", True, BLACK)
+    floors_text = font.render(f"Этажи: {player.floors_completed}", True, BLACK)
+    screen.blit(keys_text, (10, 10))
+    screen.blit(floors_text, (10, 40))
+
+    # Отображение подсказки, если игрок рядом с ключом
+    if player.near_key:
+        hint_text = font.render("Нажмите 'F', чтобы подобрать обломок ключ", True, BLACK)
+        screen.blit(hint_text, (screen_width // 2 - hint_text.get_width() // 2, screen_height - 50))
 
     if cutscene_triggered:
         alpha_value += fade_speed
@@ -297,6 +361,8 @@ while running:
     pg.display.flip()
 
     pg.time.Clock().tick(60)
+
+
 
 pg.quit()
 sys.exit()
