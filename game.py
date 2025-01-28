@@ -2,7 +2,6 @@ import json
 import random
 import sys
 import pygame as pg
-from settings import *
 
 # Инициализация Pygame
 pg.init()
