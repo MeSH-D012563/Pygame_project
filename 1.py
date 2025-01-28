@@ -2,16 +2,22 @@ import json
 import random
 
 
-# Функция для создания и сохранения карты
 def create_and_save_map(filename):
     map_dat = []
     key_parts_positions = []
+    door_position = None
 
     # Генерация 4 случайных позиций для частей ключа на всей карте
     while len(key_parts_positions) < 4:
         part_pos = (random.randint(0, 4), random.randint(0, 4), random.randint(0, 9), random.randint(0, 9))
         if part_pos not in key_parts_positions:
             key_parts_positions.append(part_pos)
+
+    # Генерация случайной позиции для двери
+    while door_position is None:
+        door_pos = (random.randint(0, 4), random.randint(0, 4), random.randint(0, 9), random.randint(0, 9))
+        if door_pos not in key_parts_positions:
+            door_position = door_pos
 
     for i in range(5):
         rrow = []
@@ -24,6 +30,8 @@ def create_and_save_map(filename):
                 for x in range(10):
                     if (i, j, x, y) in key_parts_positions:
                         row.append([3, x, y])
+                    elif (i, j, x, y) == door_position:
+                        row.append([4, x, y])  # Добавляем дверь
                     elif not (x_pos in list(range(4, 6)) and y_pos in list(range(4, 6))):
                         ran = random.choice([0, 0, 0, 0, 0, 1])  # Уменьшаем вероятность генерации деревьев
                         if ran == 1:

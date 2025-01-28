@@ -37,6 +37,18 @@ def create_background():
 # Создание фона
 background = create_background()
 
+class Door(pg.sprite.Sprite):
+    def __init__(self, x_pos, y_pos):
+        super().__init__()
+        self.x_pos = x_pos
+        self.y_pos = y_pos
+        self.image = pg.Surface((50, 50))
+        self.image.fill(BLACK)  # Дверь будет черным квадратом
+        self.rect = self.image.get_rect()
+        self.rect.center = (
+            screen_width // 10 * x_pos + screen_width // 10 // 2,
+            screen_height // 10 * y_pos + screen_height // 10 // 2)
+
 
 class KeyPart(pg.sprite.Sprite):
     def __init__(self, x_pos, y_pos):
@@ -152,6 +164,7 @@ def load_map_part(current_map_part, map_parts, check=[]):
     all_sprites.empty()
     trees.empty()
     key_parts.empty()
+    doors.empty()
 
     map_data = map_parts[current_map_part[0]][current_map_part[1]]
     for y in map_data:
@@ -164,6 +177,10 @@ def load_map_part(current_map_part, map_parts, check=[]):
                 key_part = KeyPart(x[1], x[2])
                 all_sprites.add(key_part)
                 key_parts.add(key_part)
+            elif x[0] == 4:  # Добавляем проверку для двери
+                door = Door(x[1], x[2])
+                all_sprites.add(door)
+                doors.add(door)
     all_sprites.add(player)
     for y in map_data:
         for x in y:
@@ -177,6 +194,7 @@ def load_map_part(current_map_part, map_parts, check=[]):
 all_sprites = pg.sprite.Group()
 trees = pg.sprite.Group()
 key_parts = pg.sprite.Group()
+doors = pg.sprite.Group()
 player = Player()
 
 # Загрузка всех частей карты из JSON файла
