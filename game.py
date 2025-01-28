@@ -336,7 +336,7 @@ while running:
     player.update(trees, current_map_part, map_parts, key_parts, doors)
     all_sprites.update(trees, current_map_part, map_parts, key_parts, doors)
 
-    screen.blit(background, (0, 0))  # Отображение фона
+    screen.blit(background, (0, 0))  # Фон
     all_sprites.draw(screen)
 
     # Отображение количества собранных ключей и пройденных этажей

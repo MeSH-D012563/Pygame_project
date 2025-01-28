@@ -51,10 +51,8 @@ def create_and_save_map(filename):
         json.dump(map_dat, file)
 
 
-# Параметры карты
+# Название карты
 map_filename = 'map.json'
 
 # Создание и сохранение карты
 create_and_save_map(map_filename)
-
-print(f"Карта успешно создана и сохранена в файл {map_filename}")
