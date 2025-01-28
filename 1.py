@@ -25,7 +25,7 @@ def create_and_save_map(filename):
                     if (i, j, x, y) in key_parts_positions:
                         row.append([3, x, y])
                     elif not (x_pos in list(range(4, 6)) and y_pos in list(range(4, 6))):
-                        ran = random.choice([0, 0, 0, 0, 0, 0, 0, 0, 0, 1])  # Уменьшаем вероятность генерации деревьев
+                        ran = random.choice([0, 0, 0, 0, 0, 1])  # Уменьшаем вероятность генерации деревьев
                         if ran == 1:
                             row.append([1, x, y, random.randint(100, 120)])
                         else:

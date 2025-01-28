@@ -26,6 +26,18 @@ YELLOW = (255, 255, 0)
 font = pg.font.Font(None, 36)
 large_font = pg.font.Font(None, 72)
 
+# Загрузка изображения фона
+background_image = pg.image.load('background_image.png').convert()
+background_image = pg.transform.scale(background_image, (screen_width, screen_height))
+
+# Функция для создания фона с травой
+def create_background():
+    return background_image
+
+# Создание фона
+background = create_background()
+
+
 class KeyPart(pg.sprite.Sprite):
     def __init__(self, x_pos, y_pos):
         super().__init__()
@@ -35,8 +47,9 @@ class KeyPart(pg.sprite.Sprite):
         self.image.fill(YELLOW)
         self.rect = self.image.get_rect()
         self.rect.center = (
-            screen_width // 10 * x_pos + screen_width // 10 // 3,
-            screen_height // 10 * y_pos + screen_width // 10 // 3)
+            screen_width // 10 * x_pos + screen_width // 10 // 2,
+            screen_height // 10 * y_pos + screen_height // 10 // 2)
+
 
 # Класс игрока
 class Player(pg.sprite.Sprite):
@@ -115,25 +128,24 @@ class Player(pg.sprite.Sprite):
                     new_y = player_y + dy
                     if 0 <= new_x < 10 and 0 <= new_y < 10 and map_data[new_y][new_x][0] == 0:
                         self.rect.centerx = (new_x + 0.5) * (
-                                    screen_width // 10)
+                                screen_width // 10)
                         self.rect.centery = (new_y + 0.5) * (
-                                    screen_height // 10)
+                                screen_height // 10)
                         return
+
 
 class Tree(pg.sprite.Sprite):
     def __init__(self, x_pos, y_pos, rand_sqwer):
         super().__init__()
         self.x_pos = x_pos
         self.y_pos = y_pos
-        self.image = pg.Surface((rand_sqwer, rand_sqwer),
-                                    pg.SRCALPHA)
-        self.image.fill((0, 0, 0, 0))
-        pg.draw.circle(self.image, GREEN, (rand_sqwer // 2, rand_sqwer // 2), rand_sqwer // 2,
-                           0)
+        self.image = pg.image.load('tree_image.png').convert_alpha()  # Загрузка изображения дерева
+        self.image = pg.transform.scale(self.image, (rand_sqwer, rand_sqwer))  # Масштабирование изображения
         self.rect = self.image.get_rect()
         self.rect.center = (screen_width // 10 * x_pos + rand_sqwer // 2,
                             screen_height // 10 * y_pos + rand_sqwer // 2)
         self.hitbox = self.rect.inflate(-rand_sqwer // 2, -rand_sqwer // 2)
+
 
 # Функция для загрузки части карты
 def load_map_part(current_map_part, map_parts, check=[]):
@@ -160,6 +172,7 @@ def load_map_part(current_map_part, map_parts, check=[]):
                 all_sprites.add(tree)
                 trees.add(tree)
 
+
 # Создание группы спрайтов и добавление игрока
 all_sprites = pg.sprite.Group()
 trees = pg.sprite.Group()
@@ -176,25 +189,17 @@ current_map_part = [2, 2]
 # Загрузка начальной части карты
 load_map_part(current_map_part, map_parts, check=player.is_del[current_map_part[0]][current_map_part[1]])
 
-# Функция для создания фона с травой
-def create_background():
-    background = pg.Surface((screen_width, screen_height))
-    background.fill(DARK_GREEN)
-    return background
-
-# Создание фона
-background = create_background()
 
 # Функция для отображения катсцены
 def show_cutscene(image_paths):
     for image_path in image_paths:
         cutscene_image = pg.image.load(image_path)
         cutscene_image = pg.transform.scale(cutscene_image, (
-        screen_width, screen_height))
+            screen_width, screen_height))
         screen.blit(cutscene_image, (0, 0))
 
         text_background = pg.Surface((screen_width // 3, 50),
-                                         pg.SRCALPHA)
+                                     pg.SRCALPHA)
         text_background.fill((255, 255, 255, 128))
         text_background_rect = text_background.get_rect(
             bottomright=(screen_width - 10, screen_height - 10))
@@ -211,6 +216,7 @@ def show_cutscene(image_paths):
                 if event.type == pg.KEYDOWN and event.key == pg.K_RETURN:
                     waiting = False
 
+
 # Функция для отображения начального экрана
 def show_start_screen():
     screen.fill(WHITE)
@@ -219,7 +225,7 @@ def show_start_screen():
     screen.blit(title_text, title_rect)
 
     start_button = pg.Rect(screen_width // 2 - 100, screen_height // 2, 200,
-                               50)
+                           50)
     pg.draw.rect(screen, GRAY, start_button)
     start_text = font.render("Старт", True, BLACK)
     start_text_rect = start_text.get_rect(center=start_button.center)
@@ -236,6 +242,7 @@ def show_start_screen():
             elif event.type == pg.MOUSEBUTTONDOWN:
                 if start_button.collidepoint(event.pos):
                     waiting = False
+
 
 # Основной игровой цикл
 running = True
@@ -258,7 +265,7 @@ while running:
     player.update(trees, current_map_part, map_parts)
     all_sprites.update(trees, current_map_part, map_parts)
 
-    screen.blit(background, (0, 0))
+    screen.blit(background, (0, 0))  # Отображение фона
     all_sprites.draw(screen)
 
     if cutscene_triggered:
