@@ -31,20 +31,23 @@ large_font = pg.font.Font(None, 72)
 background_image = pg.image.load('background_image.png').convert()
 background_image = pg.transform.scale(background_image, (screen_width, screen_height))
 
+
 # Функция для создания фона с травой
 def create_background():
     return background_image
 
+
 # Создание фона
 background = create_background()
+
 
 class Door(pg.sprite.Sprite):
     def __init__(self, x_pos, y_pos):
         super().__init__()
         self.x_pos = x_pos
         self.y_pos = y_pos
-        self.image = pg.Surface((50, 50))
-        self.image.fill(BLACK)  # Дверь будет черным квадратом
+        self.image = pg.image.load('door_image.png').convert_alpha()  # Загрузка изображения двери
+        self.image = pg.transform.scale(self.image, (100, 200))  # Масштабирование изображения
         self.rect = self.image.get_rect()
         self.rect.center = (
             screen_width // 10 * x_pos + screen_width // 10 // 2,
@@ -52,12 +55,13 @@ class Door(pg.sprite.Sprite):
 
 
 class KeyPart(pg.sprite.Sprite):
-    def __init__(self, x_pos, y_pos):
+    def __init__(self, x_pos, y_pos, key_type):
         super().__init__()
         self.x_pos = x_pos
         self.y_pos = y_pos
-        self.image = pg.Surface((50, 50))
-        self.image.fill(YELLOW)
+        self.key_type = key_type
+        self.image = pg.image.load(f'key_{key_type}.png').convert_alpha()  # Загрузка изображения ключа
+        self.image = pg.transform.scale(self.image, (50, 100))  # Масштабирование изображения
         self.rect = self.image.get_rect()
         self.rect.center = (
             screen_width // 10 * x_pos + screen_width // 10 // 2,
@@ -68,8 +72,24 @@ class KeyPart(pg.sprite.Sprite):
 class Player(pg.sprite.Sprite):
     def __init__(self):
         super().__init__()
-        self.image = pg.Surface((50, 50))
-        self.image.fill(WHITE)
+        self.images_up = [pg.image.load(f'player_up_{i}.png').convert_alpha() for i in
+                          range(1, 7)]  # Загрузка изображений игрока, смотрящего вверх
+        self.images_down = [pg.image.load(f'player_down_{i}.png').convert_alpha() for i in
+                            range(1, 7)]  # Загрузка изображений игрока, смотрящего вниз
+        self.images_left = [pg.image.load(f'player_left_{i}.png').convert_alpha() for i in
+                            range(1, 7)]  # Загрузка изображений игрока, смотрящего влево
+        self.images_right = [pg.image.load(f'player_right_{i}.png').convert_alpha() for i in
+                             range(1, 7)]  # Загрузка изображений игрока, смотрящего вправо
+        self.images_up = [pg.transform.scale(image, (80, 80)) for image in
+                          self.images_up]  # Масштабирование изображений
+        self.images_down = [pg.transform.scale(image, (80, 80)) for image in
+                            self.images_down]  # Масштабирование изображений
+        self.images_left = [pg.transform.scale(image, (80, 80)) for image in
+                            self.images_left]  # Масштабирование изображений
+        self.images_right = [pg.transform.scale(image, (80, 80)) for image in
+                             self.images_right]  # Масштабирование изображений
+        self.image_index = 0
+        self.image = self.images_up[self.image_index]  # Начальное изображение (смотрит вверх)
         self.rect = self.image.get_rect()
         self.rect.center = (screen_width // 2, screen_height // 2)
         self.speed = 5
@@ -77,18 +97,32 @@ class Player(pg.sprite.Sprite):
         self.key_parts_collected = 0  # Счетчик собранных частей ключа
         self.floors_completed = 0  # Счетчик пройденных этажей
         self.near_key = False  # Флаг для отслеживания близости к ключу
+        self.animation_timer = 0
+        self.animation_speed = 10  # Скорость анимации (количество кадров между сменой изображения)
+        self.direction = 'up'  # Начальное направление (смотрит вверх)
+        self.moving = False  # Флаг для отслеживания движения
 
     def update(self, trees, current_map_part, map_parts, key_parts, doors):
         self.current_map_part = current_map_part
         keys = pg.key.get_pressed()
+        self.moving = False  # Сбрасываем флаг движения
+
         if keys[pg.K_w]:
             self.rect.y -= self.speed
+            self.direction = 'up'
+            self.moving = True
         if keys[pg.K_s]:
             self.rect.y += self.speed
+            self.direction = 'down'
+            self.moving = True
         if keys[pg.K_a]:
             self.rect.x -= self.speed
+            self.direction = 'left'
+            self.moving = True
         if keys[pg.K_d]:
             self.rect.x += self.speed
+            self.direction = 'right'
+            self.moving = True
 
         for tree in trees:
             if self.rect.colliderect(tree.hitbox):
@@ -144,25 +178,20 @@ class Player(pg.sprite.Sprite):
                 self.near_key = True
                 break
 
-    def adjust_position(self, current_map_part, map_parts):
-        map_data = map_parts[current_map_part[0]][current_map_part[1]]
-        player_x = self.rect.centerx // (screen_width // 10)
-        player_y = self.rect.centery // (screen_height // 10)
-
-        if map_data[player_y][player_x][0] == 1:
-            for dx in range(-1, 2):
-                for dy in range(-1, 2):
-                    new_x = player_x + dx
-                    new_y = player_y + dy
-                    if 0 <= new_x < 10 and 0 <= new_y < 10 and map_data[new_y][new_x][0] == 0:
-                        self.rect.centerx = (new_x + 0.5) * (
-                                screen_width // 10)
-                        self.rect.centery = (new_y + 0.5) * (
-                                screen_height // 10)
-                        return
-
-
-
+        # Обновление анимации только если игрок движется
+        if self.moving:
+            self.animation_timer += 1
+            if self.animation_timer >= self.animation_speed:
+                self.animation_timer = 0
+                self.image_index = (self.image_index + 1) % len(self.images_up)
+                if self.direction == 'up':
+                    self.image = self.images_up[self.image_index]
+                elif self.direction == 'down':
+                    self.image = self.images_down[self.image_index]
+                elif self.direction == 'left':
+                    self.image = self.images_left[self.image_index]
+                elif self.direction == 'right':
+                    self.image = self.images_right[self.image_index]
 
     def adjust_position(self, current_map_part, map_parts):
         map_data = map_parts[current_map_part[0]][current_map_part[1]]
@@ -210,7 +239,7 @@ def load_map_part(current_map_part, map_parts, check=[]):
                     for i in check:
                         if i[0] == x[1] and i[1] == x[2]:
                             x[0] = 0
-                key_part = KeyPart(x[1], x[2])
+                key_part = KeyPart(x[1], x[2], x[3])  # Передача типа ключа
                 all_sprites.add(key_part)
                 key_parts.add(key_part)
             elif x[0] == 4:  # Добавляем проверку для двери
@@ -242,6 +271,7 @@ current_map_part = [2, 2]
 
 # Загрузка начальной части карты
 load_map_part(current_map_part, map_parts, check=player.is_del[current_map_part[0]][current_map_part[1]])
+
 
 def generate_new_map():
     global map_parts, current_map_part, player
@@ -336,18 +366,18 @@ while running:
     player.update(trees, current_map_part, map_parts, key_parts, doors)
     all_sprites.update(trees, current_map_part, map_parts, key_parts, doors)
 
-    screen.blit(background, (0, 0))  # Фон
+    screen.blit(background, (0, 0))  # Отображение фона
     all_sprites.draw(screen)
 
     # Отображение количества собранных ключей и пройденных этажей
-    keys_text = font.render(f"Части ключа: {player.key_parts_collected}/4", True, BLACK)
+    keys_text = font.render(f"Ключи: {player.key_parts_collected}/4", True, BLACK)
     floors_text = font.render(f"Этажи: {player.floors_completed}", True, BLACK)
     screen.blit(keys_text, (10, 10))
     screen.blit(floors_text, (10, 40))
 
     # Отображение подсказки, если игрок рядом с ключом
     if player.near_key:
-        hint_text = font.render("Нажмите 'F', чтобы подобрать обломок ключ", True, BLACK)
+        hint_text = font.render("Нажмите 'F', чтобы подобрать ключ", True, BLACK)
         screen.blit(hint_text, (screen_width // 2 - hint_text.get_width() // 2, screen_height - 50))
 
     if cutscene_triggered:
@@ -361,8 +391,6 @@ while running:
     pg.display.flip()
 
     pg.time.Clock().tick(60)
-
-
 
 pg.quit()
 sys.exit()

@@ -29,7 +29,8 @@ def create_and_save_map(filename):
                 row = []
                 for x in range(10):
                     if (i, j, x, y) in key_parts_positions:
-                        row.append([3, x, y])
+                        key_type = key_parts_positions.index((i, j, x, y)) + 1  # Определение типа ключа
+                        row.append([3, x, y, key_type])  # Добавление типа ключа
                     elif (i, j, x, y) == door_position:
                         row.append([4, x, y])  # Добавляем дверь
                     elif not (x_pos in list(range(4, 6)) and y_pos in list(range(4, 6))):
