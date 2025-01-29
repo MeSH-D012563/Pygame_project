@@ -173,20 +173,22 @@ class Player(pg.sprite.Sprite):
                 self.near_key = True
                 break
 
+        # Обновление изображения в зависимости от направления
+        if self.direction == 'up':
+            self.image = self.images_up[self.image_index]
+        elif self.direction == 'down':
+            self.image = self.images_down[self.image_index]
+        elif self.direction == 'left':
+            self.image = self.images_left[self.image_index]
+        elif self.direction == 'right':
+            self.image = self.images_right[self.image_index]
+
         # Обновление анимации только если игрок движется
         if self.moving:
             self.animation_timer += 1
             if self.animation_timer >= self.animation_speed:
                 self.animation_timer = 0
                 self.image_index = (self.image_index + 1) % len(self.images_up)
-                if self.direction == 'up':
-                    self.image = self.images_up[self.image_index]
-                elif self.direction == 'down':
-                    self.image = self.images_down[self.image_index]
-                elif self.direction == 'left':
-                    self.image = self.images_left[self.image_index]
-                elif self.direction == 'right':
-                    self.image = self.images_right[self.image_index]
 
     def adjust_position(self, current_map_part, map_parts):
         map_data = map_parts[current_map_part[0]][current_map_part[1]]
@@ -275,9 +277,9 @@ def generate_new_map():
         map_parts = json.load(f)
     current_map_part = [2, 2]
     player.key_parts_collected = 0
-    player.floors_completed += 1  # Увеличиваем счетчик пройденных этажей
     player.is_del = [[[] for _ in range(5)] for _ in range(5)]
     load_map_part(current_map_part, map_parts, check=player.is_del[current_map_part[0]][current_map_part[1]])
+
 
 # Функция для отображения начального экрана
 def show_start_screen():
@@ -305,6 +307,7 @@ def show_start_screen():
                 if start_button.collidepoint(event.pos):
                     waiting = False
 
+
 def create_mini_game():
     colors = ['red', 'green', 'blue', 'yellow']
     points = []
@@ -315,12 +318,14 @@ def create_mini_game():
             points.append((x, y, color))
     return points
 
+
 # Функция для отображения мини-игры
 def show_mini_game(points):
     screen.fill(WHITE)
     for point in points:
         pg.draw.circle(screen, point[2], (point[0], point[1]), 20)
     pg.display.flip()
+
 
 # Функция для проверки соединения точек
 def check_connection(points, start, end):
@@ -330,6 +335,7 @@ def check_connection(points, start, end):
         points.remove(end)
         return True
     return False
+
 
 # Основной игровой цикл
 running = True
