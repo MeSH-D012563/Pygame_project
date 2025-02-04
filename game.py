@@ -1,5 +1,4 @@
 import json
-import random
 import sys
 import pygame as pg
 from creating_map import create_and_save_map
@@ -94,7 +93,7 @@ class Player(pg.sprite.Sprite):
         self.rect.center = (screen_width // 2, screen_height // 2)
         self.speed = 5
         self.is_del = [[[] for _ in range(5)] for _ in range(5)]
-        self.key_parts_collected = 0  # Счетчик собранных частей ключа
+        self.key_parts_collected = 4  # Счетчик собранных частей ключа
         self.floors_completed = 0  # Счетчик пройденных этажей
         self.near_key = False  # Флаг для отслеживания близости к ключу
         self.animation_timer = 0
@@ -173,22 +172,20 @@ class Player(pg.sprite.Sprite):
                 self.near_key = True
                 break
 
-        # Обновление изображения в зависимости от направления
-        if self.direction == 'up':
-            self.image = self.images_up[self.image_index]
-        elif self.direction == 'down':
-            self.image = self.images_down[self.image_index]
-        elif self.direction == 'left':
-            self.image = self.images_left[self.image_index]
-        elif self.direction == 'right':
-            self.image = self.images_right[self.image_index]
-
         # Обновление анимации только если игрок движется
         if self.moving:
             self.animation_timer += 1
             if self.animation_timer >= self.animation_speed:
                 self.animation_timer = 0
                 self.image_index = (self.image_index + 1) % len(self.images_up)
+                if self.direction == 'up':
+                    self.image = self.images_up[self.image_index]
+                elif self.direction == 'down':
+                    self.image = self.images_down[self.image_index]
+                elif self.direction == 'left':
+                    self.image = self.images_left[self.image_index]
+                elif self.direction == 'right':
+                    self.image = self.images_right[self.image_index]
 
     def adjust_position(self, current_map_part, map_parts):
         map_data = map_parts[current_map_part[0]][current_map_part[1]]
@@ -277,6 +274,7 @@ def generate_new_map():
         map_parts = json.load(f)
     current_map_part = [2, 2]
     player.key_parts_collected = 0
+    player.floors_completed += 1  # Увеличиваем счетчик пройденных этажей
     player.is_del = [[[] for _ in range(5)] for _ in range(5)]
     load_map_part(current_map_part, map_parts, check=player.is_del[current_map_part[0]][current_map_part[1]])
 
@@ -288,12 +286,17 @@ def show_start_screen():
     title_rect = title_text.get_rect(center=(screen_width // 2, screen_height // 3))
     screen.blit(title_text, title_rect)
 
-    start_button = pg.Rect(screen_width // 2 - 100, screen_height // 2, 200,
-                           50)
+    start_button = pg.Rect(screen_width // 2 - 100, screen_height // 2 - 50, 200, 50)
     pg.draw.rect(screen, GRAY, start_button)
     start_text = font.render("Старт", True, BLACK)
     start_text_rect = start_text.get_rect(center=start_button.center)
     screen.blit(start_text, start_text_rect)
+
+    rules_button = pg.Rect(screen_width // 2 - 100, screen_height // 2 + 50, 200, 50)
+    pg.draw.rect(screen, GRAY, rules_button)
+    rules_text = font.render("Правила", True, BLACK)
+    rules_text_rect = rules_text.get_rect(center=rules_button.center)
+    screen.blit(rules_text, rules_text_rect)
 
     pg.display.flip()
 
@@ -306,35 +309,58 @@ def show_start_screen():
             elif event.type == pg.MOUSEBUTTONDOWN:
                 if start_button.collidepoint(event.pos):
                     waiting = False
+                elif rules_button.collidepoint(event.pos):
+                    show_rules_screen()
 
 
-def create_mini_game():
-    colors = ['red', 'green', 'blue', 'yellow']
-    points = []
-    for color in colors:
-        for _ in range(2):
-            x = random.randint(50, screen_width - 50)
-            y = random.randint(50, screen_height - 50)
-            points.append((x, y, color))
-    return points
-
-
-# Функция для отображения мини-игры
-def show_mini_game(points):
+# Функция для отображения экрана с правилами
+def show_rules_screen():
     screen.fill(WHITE)
-    for point in points:
-        pg.draw.circle(screen, point[2], (point[0], point[1]), 20)
+    rules_text = [
+        "Цель игры: Соберите все части ключа и найдите дверь, чтобы перейти на следующий этаж.",
+        "Управление:",
+        "  - W: Движение вверх",
+        "  - S: Движение вниз",
+        "  - A: Движение влево",
+        "  - D: Движение вправо",
+        "  - F: Подобрать часть ключа (когда рядом с ключом)",
+        "Игровой процесс:",
+        "  - Игрок начинает с центральной части карты.",
+        "  - Карта состоит из 25 частей (5x5), каждая часть содержит деревья, 4 ключа и дверь.",
+        "  - Деревья являются препятствиями, через которые игрок не может пройти.",
+        "  - Ключи находятся в разных частях карты. Соберите все части ключа, чтобы открыть дверь.",
+        "  - Дверь переносит игрока на следующий этаж, где карта генерируется заново.",
+        "  - Количество собранных ключей и пройденных этажей отображается в верхнем левом углу экрана.",
+        "Советы:",
+        "  - Внимательно исследуйте карту, чтобы найти все части ключа.",
+        "  - Следите за количеством собранных ключей."
+    ]
+
+    y_offset = 50
+    for line in rules_text:
+        text_surface = font.render(line, True, BLACK)
+        text_rect = text_surface.get_rect(center=(screen_width // 2, y_offset))
+        screen.blit(text_surface, text_rect)
+        y_offset += 40
+
+    back_button = pg.Rect(screen_width // 2 - 100, screen_height - 100, 200, 50)
+    pg.draw.rect(screen, GRAY, back_button)
+    back_text = font.render("Назад", True, BLACK)
+    back_text_rect = back_text.get_rect(center=back_button.center)
+    screen.blit(back_text, back_text_rect)
+
     pg.display.flip()
 
-
-# Функция для проверки соединения точек
-def check_connection(points, start, end):
-    if start[2] == end[2]:
-        pg.draw.line(screen, start[2], (start[0], start[1]), (end[0], end[1]), 5)
-        points.remove(start)
-        points.remove(end)
-        return True
-    return False
+    waiting = True
+    while waiting:
+        for event in pg.event.get():
+            if event.type == pg.QUIT:
+                pg.quit()
+                sys.exit()
+            elif event.type == pg.MOUSEBUTTONDOWN:
+                if back_button.collidepoint(event.pos):
+                    waiting = False
+                    show_start_screen()
 
 
 # Основной игровой цикл
@@ -343,8 +369,6 @@ cutscene_triggered = False
 cutscene_shown = False
 alpha_value = 0
 fade_speed = 5
-mini_game_active = False
-mini_game_points = []
 
 # Отображение начального экрана
 show_start_screen()
@@ -363,50 +387,33 @@ while running:
                         key_part.kill()
                         player.is_del[current_map_part[0]][current_map_part[1]].append([key_part.x_pos, key_part.y_pos])
 
-    if not mini_game_active:
-        player.update(trees, current_map_part, map_parts, key_parts, doors)
-        all_sprites.update(trees, current_map_part, map_parts, key_parts, doors)
+    player.update(trees, current_map_part, map_parts, key_parts, doors)
+    all_sprites.update(trees, current_map_part, map_parts, key_parts, doors)
 
-        screen.blit(background, (0, 0))  # Отображение фона
-        all_sprites.draw(screen)
+    screen.blit(background, (0, 0))  # Отображение фона
+    all_sprites.draw(screen)
 
-        # Отображение количества собранных ключей и пройденных этажей
-        keys_text = font.render(f"Ключи: {player.key_parts_collected}/4", True, BLACK)
-        floors_text = font.render(f"Этажи: {player.floors_completed}", True, BLACK)
-        screen.blit(keys_text, (10, 10))
-        screen.blit(floors_text, (10, 40))
+    # Отображение количества собранных ключей и пройденных этажей
+    keys_text = font.render(f"Ключи: {player.key_parts_collected}/4", True, BLACK)
+    floors_text = font.render(f"Этажи: {player.floors_completed}", True, BLACK)
+    screen.blit(keys_text, (10, 10))
+    screen.blit(floors_text, (10, 40))
 
-        # Отображение подсказки, если игрок рядом с ключом
-        if player.near_key:
-            hint_text = font.render("Нажмите 'F', чтобы подобрать ключ", True, BLACK)
-            screen.blit(hint_text, (screen_width // 2 - hint_text.get_width() // 2, screen_height - 50))
+    # Отображение подсказки, если игрок рядом с ключом
+    if player.near_key:
+        hint_text = font.render("Нажмите 'F', чтобы подобрать ключ", True, BLACK)
+        screen.blit(hint_text, (screen_width // 2 - hint_text.get_width() // 2, screen_height - 50))
 
-        # Проверка на взаимодействие с дверью
-        for door in doors:
-            if player.rect.colliderect(door.rect) and player.key_parts_collected == 4:
-                mini_game_active = True
-                mini_game_points = create_mini_game()
-                show_mini_game(mini_game_points)
-
-    else:
-        show_mini_game(mini_game_points)
-        for event in pg.event.get():
-            if event.type == pg.MOUSEBUTTONDOWN:
-                mouse_pos = pg.mouse.get_pos()
-                for i, point in enumerate(mini_game_points):
-                    if (point[0] - mouse_pos[0]) ** 2 + (point[1] - mouse_pos[1]) ** 2 <= 20 ** 2:
-                        for j, other_point in enumerate(mini_game_points):
-                            if i != j and check_connection(mini_game_points, point, other_point):
-                                if len(mini_game_points) == 0:
-                                    mini_game_active = False
-                                    generate_new_map()
-                                    player.key_parts_collected = 0
-                                    player.floors_completed += 1
+    # Проверка на взаимодействие с дверью
+    for door in doors:
+        if player.rect.colliderect(door.rect) and player.key_parts_collected >= 4:
+            generate_new_map()
+            player.key_parts_collected = 0
+            player.floors_completed += 1
 
     pg.display.flip()
 
     pg.time.Clock().tick(60)
-
 
 pg.quit()
 sys.exit()
