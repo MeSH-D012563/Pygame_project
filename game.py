@@ -1,6 +1,8 @@
 import json
+import random
 import sys
 import pygame as pg
+import sqlite3
 from creating_map import create_and_save_map
 
 # Инициализация Pygame
@@ -93,7 +95,7 @@ class Player(pg.sprite.Sprite):
         self.rect.center = (screen_width // 2, screen_height // 2)
         self.speed = 5
         self.is_del = [[[] for _ in range(5)] for _ in range(5)]
-        self.key_parts_collected = 4  # Счетчик собранных частей ключа
+        self.key_parts_collected = 0  # Счетчик собранных частей ключа
         self.floors_completed = 0  # Счетчик пройденных этажей
         self.near_key = False  # Флаг для отслеживания близости к ключу
         self.animation_timer = 0
@@ -280,6 +282,7 @@ def generate_new_map():
 
 
 # Функция для отображения начального экрана
+# Функция для отображения начального экрана
 def show_start_screen():
     screen.fill(WHITE)
     title_text = large_font.render("Начало игры", True, BLACK)
@@ -298,6 +301,12 @@ def show_start_screen():
     rules_text_rect = rules_text.get_rect(center=rules_button.center)
     screen.blit(rules_text, rules_text_rect)
 
+    results_button = pg.Rect(screen_width // 2 - 100, screen_height // 2 + 150, 200, 50)
+    pg.draw.rect(screen, GRAY, results_button)
+    results_text = font.render("Результаты", True, BLACK)
+    results_text_rect = results_text.get_rect(center=results_button.center)
+    screen.blit(results_text, results_text_rect)
+
     pg.display.flip()
 
     waiting = True
@@ -311,6 +320,8 @@ def show_start_screen():
                     waiting = False
                 elif rules_button.collidepoint(event.pos):
                     show_rules_screen()
+                elif results_button.collidepoint(event.pos):
+                    show_results_screen()
 
 
 # Функция для отображения экрана с правилами
@@ -363,6 +374,105 @@ def show_rules_screen():
                     show_start_screen()
 
 
+# Функция для отображения экрана с результатами
+def show_results_screen():
+    screen.fill(WHITE)
+    results_text = [
+        "Результаты прошлых игроков:",
+        "Ник",
+        "Этажи"
+    ]
+
+    conn = sqlite3.connect('game_results.db')
+    cursor = conn.cursor()
+    cursor.execute('SELECT nickname, floors_completed FROM results ORDER BY floors_completed DESC')
+    results = cursor.fetchall()
+    conn.close()
+
+    y_offset = 100
+    for nickname, floors_completed in results:
+        result_text = f"{nickname}: {floors_completed}"
+        text_surface = font.render(result_text, True, BLACK)
+        text_rect = text_surface.get_rect(center=(screen_width // 2, y_offset))
+        screen.blit(text_surface, text_rect)
+        y_offset += 40
+
+    back_button = pg.Rect(screen_width // 2 - 100, screen_height - 100, 200, 50)
+    pg.draw.rect(screen, GRAY, back_button)
+    back_text = font.render("Назад", True, BLACK)
+    back_text_rect = back_text.get_rect(center=back_button.center)
+    screen.blit(back_text, back_text_rect)
+
+    pg.display.flip()
+
+    waiting = True
+    while waiting:
+        for event in pg.event.get():
+            if event.type == pg.QUIT:
+                pg.quit()
+                sys.exit()
+            elif event.type == pg.MOUSEBUTTONDOWN:
+                if back_button.collidepoint(event.pos):
+                    waiting = False
+                    show_start_screen()
+
+
+# Функция для сохранения результата в базу данных
+def save_result(nickname, floors_completed):
+    conn = sqlite3.connect('game_results.db')
+    cursor = conn.cursor()
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS results (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            nickname TEXT NOT NULL,
+            floors_completed INTEGER NOT NULL
+        )
+    ''')
+    cursor.execute('''
+        INSERT INTO results (nickname, floors_completed)
+        VALUES (?, ?)
+    ''', (nickname, floors_completed))
+    conn.commit()
+    conn.close()
+
+
+# Функция для ввода ника
+def input_nickname():
+    screen.fill(WHITE)
+    input_text = font.render("Введите ваш ник:", True, BLACK)
+    input_rect = input_text.get_rect(center=(screen_width // 2, screen_height // 3))
+    screen.blit(input_text, input_rect)
+
+    input_box = pg.Rect(screen_width // 2 - 100, screen_height // 2, 200, 50)
+    pg.draw.rect(screen, GRAY, input_box)
+    nickname = ''
+
+    pg.display.flip()
+
+    waiting = True
+    while waiting:
+        for event in pg.event.get():
+            if event.type == pg.QUIT:
+                pg.quit()
+                sys.exit()
+            elif event.type == pg.KEYDOWN:
+                if event.key == pg.K_RETURN:
+                    waiting = False
+                elif event.key == pg.K_BACKSPACE:
+                    nickname = nickname[:-1]
+                else:
+                    nickname += event.unicode
+
+        screen.fill(WHITE)
+        screen.blit(input_text, input_rect)
+        pg.draw.rect(screen, GRAY, input_box)
+        text_surface = font.render(nickname, True, BLACK)
+        screen.blit(text_surface, (input_box.x + 10, input_box.y + 10))
+        pg.display.flip()
+
+    return nickname
+
+
 # Основной игровой цикл
 running = True
 cutscene_triggered = False
@@ -378,7 +488,7 @@ while running:
         if event.type == pg.QUIT:
             running = False
         elif event.type == pg.KEYDOWN:
-            if event.key == pg.K_F11:
+            if event.key == pg.K_q:  # Закрытие игры на клавишу "Q"
                 running = False
             elif event.key == pg.K_f:  # Обработка нажатия кнопки "F"
                 for key_part in key_parts:
@@ -414,6 +524,10 @@ while running:
     pg.display.flip()
 
     pg.time.Clock().tick(60)
+
+# Сохранение результата при закрытии игры
+nickname = input_nickname()
+save_result(nickname, player.floors_completed)
 
 pg.quit()
 sys.exit()
